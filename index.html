@@ -30,6 +30,7 @@
     --speech: #6E5A8C;
     --core: #7A6A4F;
     --swallow: #8C5A6E;
+    --worksheets: #4E6B5C;
 
     --radius: 18px;
     --font-scale: 1;
@@ -236,6 +237,7 @@
   .cat-tile.speech { background: var(--speech); }
   .cat-tile.core { background: var(--core); }
   .cat-tile.swallow { background: var(--swallow); }
+  .cat-tile.worksheets { background: var(--worksheets); }
   .cat-tile.spell { background: var(--ink); }
 
   /* ---------- Spelling keyboard ---------- */
@@ -292,6 +294,76 @@
   .key-btn:active { transform: scale(0.95); background: var(--border); }
   .key-btn.backspace { background: var(--no); color: #fff; border: none; font-size: calc(16px * var(--font-scale)); }
 
+  /* ---------- Worksheet card viewer ---------- */
+  .ws-wrap { padding: 4px 16px 32px; }
+  .ws-progress {
+    font-size: calc(14px * var(--font-scale));
+    color: var(--ink-soft);
+    font-weight: 600;
+    margin-bottom: 10px;
+  }
+  .ws-card {
+    background: var(--card-bg);
+    border: 2px solid var(--border);
+    border-radius: var(--radius);
+    padding: calc(36px * var(--font-scale)) calc(20px * var(--font-scale));
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 18px;
+    text-align: center;
+    margin-bottom: 14px;
+  }
+  .ws-text {
+    font-size: calc(34px * var(--font-scale));
+    font-weight: 700;
+    color: var(--ink);
+    line-height: 1.3;
+  }
+  .ws-speak {
+    border: none;
+    background: var(--worksheets);
+    color: #fff;
+    border-radius: 12px;
+    padding: calc(10px * var(--font-scale)) calc(20px * var(--font-scale));
+    font-size: calc(16px * var(--font-scale));
+    font-weight: 700;
+    cursor: pointer;
+  }
+  .ws-score-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin-bottom: 10px;
+  }
+  .ws-score-row button {
+    border: none;
+    border-radius: 12px;
+    padding: calc(14px * var(--font-scale)) 6px;
+    font-size: calc(16px * var(--font-scale));
+    font-weight: 700;
+    color: #fff;
+    cursor: pointer;
+  }
+  .ws-correct { background: var(--yes); }
+  .ws-retry { background: var(--help); }
+  .ws-nav-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 8px;
+  }
+  .ws-nav-btn {
+    border: 1px solid var(--border);
+    background: var(--card-bg);
+    color: var(--ink);
+    border-radius: 12px;
+    padding: calc(12px * var(--font-scale)) 4px;
+    font-size: calc(15px * var(--font-scale));
+    font-weight: 700;
+    cursor: pointer;
+  }
+  .ws-nav-btn:active { background: var(--border); }
+
   .section-note {
     padding: 4px 16px 0;
     font-size: calc(14px * var(--font-scale));
@@ -328,7 +400,7 @@
 </div>
 
 <div class="header-row">
-  <button class="back-btn" id="backBtn" onclick="showScreen('home')">← Back</button>
+  <button class="back-btn" id="backBtn" onclick="goBack()">← Back</button>
   <div class="screen-title" id="screenTitle">Choose a topic</div>
   <div class="size-toggle">
     <button data-size="1" onclick="setFontScale(1)">A</button>
@@ -364,6 +436,7 @@ const categories = {
       { id: 'speech', label: 'Speech Session', icon: '🗣️', cls: 'speech', goto: 'speech', disciplines: ['slp'] },
       { id: 'core', label: 'Core Words', icon: '🔑', cls: 'core', goto: 'core', disciplines: ['slp','pt','ot'] },
       { id: 'swallow', label: 'Swallowing & Eating', icon: '🍽️', cls: 'swallow', goto: 'swallow', disciplines: ['slp'] },
+      { id: 'worksheets', label: 'Practice Worksheets', icon: '📝', cls: 'worksheets', goto: 'worksheets', disciplines: ['slp'] },
       { id: 'feelings', label: 'Feelings', icon: '💛', cls: 'feelings', goto: 'feelings', disciplines: ['pt','ot','slp'] },
       { id: 'people', label: 'People', icon: '👪', cls: 'people', goto: 'people', disciplines: ['pt','ot','slp'] },
       { id: 'comfort', label: 'Comfort & TV', icon: '📺', cls: 'comfort', goto: 'comfort', disciplines: ['pt','ot','slp'] },
@@ -518,6 +591,21 @@ const categories = {
       { icon: '👍', label: 'That went down fine', speak: 'That went down fine' },
     ]
   },
+  worksheets: {
+    title: 'Practice Worksheets',
+    tiles: [
+      { icon: '🐍', label: '/S/ Sound Words', cls: 'worksheets', goto: 'ws-artic-s' },
+      { icon: '🚗', label: '/R/ Sound Words', cls: 'worksheets', goto: 'ws-artic-r' },
+      { icon: '🦁', label: '/L/ Sound Words', cls: 'worksheets', goto: 'ws-artic-l' },
+      { icon: '👍', label: '/TH/ Sound Words', cls: 'worksheets', goto: 'ws-artic-th' },
+      { icon: '🐶', label: '/K/ and /G/ Sound Words', cls: 'worksheets', goto: 'ws-artic-kg' },
+      { icon: '👟', label: '/SH/ and /CH/ Sound Words', cls: 'worksheets', goto: 'ws-artic-shch' },
+      { icon: '🔍', label: 'Word Finding', cls: 'worksheets', goto: 'ws-word-finding' },
+      { icon: '📦', label: 'Naming Categories', cls: 'worksheets', goto: 'ws-categories' },
+      { icon: '👉', label: 'Following Directions', cls: 'worksheets', goto: 'ws-directions' },
+      { icon: '✏️', label: 'Finish the Sentence', cls: 'worksheets', goto: 'ws-sentences' },
+    ]
+  },
   phrases: {
     title: 'Common Phrases',
     tiles: [
@@ -533,8 +621,156 @@ const categories = {
   }
 };
 
+const worksheetsData = {
+  'ws-artic-s': { title: '/S/ Sound Words', mode: 'word',
+    items: ['Sun','Soap','Sock','Bus','Mouse','House','Snake','Glasses','Ice','Missing'] },
+  'ws-artic-r': { title: '/R/ Sound Words', mode: 'word',
+    items: ['Red','Rabbit','Car','Star','Door','Mirror','Arrow','River','Tiger','Four'] },
+  'ws-artic-l': { title: '/L/ Sound Words', mode: 'word',
+    items: ['Lion','Leaf','Ball','Table','Milk','Apple','Yellow','Lamp','Pillow','Blue'] },
+  'ws-artic-th': { title: '/TH/ Sound Words', mode: 'word',
+    items: ['Thumb','Think','Mouth','Teeth','Bath','Three','Throw','Bathtub','Birthday','Tooth'] },
+  'ws-artic-kg': { title: '/K/ and /G/ Sound Words', mode: 'word',
+    items: ['Cat','Cup','Key','Cake','Go','Girl','Dog','Game','Garden','Cookie'] },
+  'ws-artic-shch': { title: '/SH/ and /CH/ Sound Words', mode: 'word',
+    items: ['Shoe','Fish','Wash','Ship','Chair','Chicken','Lunch','Church','Cheese','Watch'] },
+  'ws-word-finding': { title: 'Word Finding', mode: 'prompt',
+    items: [
+      'Name something you use to eat soup',
+      'Name something that is cold',
+      'Name an animal that flies',
+      'Name something you wear on your feet',
+      'Name something you use to write',
+      'Name a fruit that is yellow',
+      'Name something found in a kitchen',
+      'Name a job someone does at a hospital',
+      'Name a season of the year',
+      'Name something you do before bed'
+    ] },
+  'ws-categories': { title: 'Naming Categories', mode: 'prompt',
+    items: [
+      'Name 3 fruits',
+      'Name 3 vegetables',
+      'Name 3 animals',
+      'Name 3 pieces of furniture',
+      'Name 3 things you find in a bathroom',
+      'Name 3 tools',
+      'Name 3 colors',
+      'Name 3 kinds of weather',
+      'Name 3 things at a grocery store',
+      'Name 3 family members'
+    ] },
+  'ws-directions': { title: 'Following Directions', mode: 'prompt',
+    items: [
+      'Touch your nose, then clap your hands',
+      'Point to the window, then point to the door',
+      'Pick up something small and put it on the table',
+      'Touch your shoulder, then touch your knee',
+      'Point to something red in the room',
+      'Give me one thing, then take it back',
+      'Stand up, turn around, then sit back down',
+      'Touch your ear, then touch your chin'
+    ] },
+  'ws-sentences': { title: 'Finish the Sentence', mode: 'prompt',
+    items: [
+      'I brush my ___',
+      'The sky is ___',
+      'To cut paper I use a ___',
+      'At night I go to ___',
+      'When I am thirsty I ___',
+      'A dog says ___',
+      'I wear shoes on my ___',
+      'Ice is very ___',
+      'The sun is ___',
+      'I eat breakfast in the ___'
+    ] },
+};
+
+let wsState = { id: null, index: 0, correct: 0, attempted: 0 };
+let backTarget = 'home';
 let lastSpoken = '';
 let spellBuffer = '';
+
+function goBack() {
+  showScreen(backTarget);
+}
+
+function renderWorksheetScreen(id) {
+  const data = worksheetsData[id];
+  if (wsState.id !== id) {
+    wsState = { id: id, index: 0, correct: 0, attempted: 0 };
+  }
+  backTarget = 'worksheets';
+
+  document.getElementById('screenTitle').textContent = data.title;
+  document.getElementById('backBtn').classList.toggle('visible', true);
+  document.getElementById('disciplineRow').style.display = 'none';
+
+  const app = document.getElementById('app');
+  app.innerHTML = '';
+
+  const wrap = document.createElement('div');
+  wrap.className = 'ws-wrap';
+
+  const progress = document.createElement('div');
+  progress.className = 'ws-progress';
+  progress.textContent = 'Card ' + (wsState.index + 1) + ' of ' + data.items.length +
+    (wsState.attempted > 0 ? ' · ' + wsState.correct + '/' + wsState.attempted + ' correct this session' : '');
+  wrap.appendChild(progress);
+
+  const card = document.createElement('div');
+  card.className = 'ws-card';
+  const currentText = data.items[wsState.index];
+  card.innerHTML =
+    '<div class="ws-text">' + currentText + '</div>' +
+    '<button class="ws-speak" id="wsSpeakBtn">🔊 Say it</button>';
+  wrap.appendChild(card);
+
+  const scoreRow = document.createElement('div');
+  scoreRow.className = 'ws-score-row';
+  scoreRow.innerHTML =
+    '<button class="ws-correct" id="wsCorrectBtn">✓ Said correctly</button>' +
+    '<button class="ws-retry" id="wsRetryBtn">↻ Needs practice</button>';
+  wrap.appendChild(scoreRow);
+
+  const nav = document.createElement('div');
+  nav.className = 'ws-nav-row';
+  nav.innerHTML =
+    '<button class="ws-nav-btn" id="wsPrevBtn">← Previous</button>' +
+    '<button class="ws-nav-btn" id="wsRestartBtn">Restart</button>' +
+    '<button class="ws-nav-btn" id="wsNextBtn">Next →</button>';
+  wrap.appendChild(nav);
+
+  app.appendChild(wrap);
+
+  document.getElementById('wsSpeakBtn').onclick = () => speak(
+    data.mode === 'word' ? currentText : currentText
+  );
+  document.getElementById('wsCorrectBtn').onclick = () => { wsState.correct++; wsState.attempted++; wsAdvance(id); };
+  document.getElementById('wsRetryBtn').onclick = () => { wsState.attempted++; wsAdvance(id); };
+  document.getElementById('wsPrevBtn').onclick = () => {
+    wsState.index = (wsState.index - 1 + data.items.length) % data.items.length;
+    renderWorksheetScreen(id);
+  };
+  document.getElementById('wsNextBtn').onclick = () => {
+    wsState.index = (wsState.index + 1) % data.items.length;
+    renderWorksheetScreen(id);
+  };
+  document.getElementById('wsRestartBtn').onclick = () => {
+    wsState = { id: id, index: 0, correct: 0, attempted: 0 };
+    renderWorksheetScreen(id);
+  };
+
+  window.scrollTo(0,0);
+}
+
+function wsAdvance(id) {
+  const data = worksheetsData[id];
+  wsState.index = (wsState.index + 1) % data.items.length;
+  renderWorksheetScreen(id);
+}
+
+
 
 let speakWatchdog = null;
 let resumeInterval = null;
@@ -698,11 +934,17 @@ function updateSpellPreview() {
 }
 
 function showScreen(id) {
+  if (id.startsWith('ws-')) {
+    renderWorksheetScreen(id);
+    return;
+  }
   if (id === 'spell') {
+    backTarget = 'home';
     renderSpellScreen();
     window.scrollTo(0,0);
     return;
   }
+  backTarget = 'home';
   const cat = categories[id];
   document.getElementById('screenTitle').textContent = cat.title;
   document.getElementById('backBtn').classList.toggle('visible', id !== 'home');

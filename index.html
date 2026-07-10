@@ -364,6 +364,17 @@
   }
   .ws-nav-btn:active { background: var(--border); }
 
+  .ws-reset-link {
+    display: block;
+    margin: 14px auto 0;
+    border: none;
+    background: none;
+    color: var(--ink-soft);
+    font-size: calc(13px * var(--font-scale));
+    text-decoration: underline;
+    cursor: pointer;
+  }
+
   .section-note {
     padding: 4px 16px 0;
     font-size: calc(14px * var(--font-scale));
@@ -686,7 +697,7 @@ const worksheetsData = {
     ] },
 };
 
-let wsState = { id: null, index: 0, correct: 0, attempted: 0 };
+let wsState = { id: null, queue: [], mastered: [], correct: 0, attempted: 0 };
 let backTarget = 'home';
 let lastSpoken = '';
 let spellBuffer = '';
@@ -695,10 +706,47 @@ function goBack() {
   showScreen(backTarget);
 }
 
+function shuffleArray(arr) {
+  const a = arr.slice();
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+function loadWsWeights(id, length) {
+  try {
+    const raw = localStorage.getItem('selko-voice-ws-weight-' + id);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed) && parsed.length === length) return parsed;
+    }
+  } catch (e) {}
+  return new Array(length).fill(0);
+}
+
+function saveWsWeights(id, weights) {
+  try { localStorage.setItem('selko-voice-ws-weight-' + id, JSON.stringify(weights)); } catch (e) {}
+}
+
+function buildWsQueue(id) {
+  const data = worksheetsData[id];
+  const weights = loadWsWeights(id, data.items.length);
+  // Items marked "needs practice" in past sessions get extra reps this session,
+  // so this deck isn't the same fixed order/frequency every time.
+  let pool = [];
+  data.items.forEach((_, i) => {
+    const reps = 1 + Math.min(weights[i], 2);
+    for (let r = 0; r < reps; r++) pool.push(i);
+  });
+  return shuffleArray(pool);
+}
+
 function renderWorksheetScreen(id) {
   const data = worksheetsData[id];
   if (wsState.id !== id) {
-    wsState = { id: id, index: 0, correct: 0, attempted: 0 };
+    wsState = { id: id, queue: buildWsQueue(id), mastered: [], correct: 0, attempted: 0 };
   }
   backTarget = 'worksheets';
 
@@ -708,19 +756,44 @@ function renderWorksheetScreen(id) {
 
   const app = document.getElementById('app');
   app.innerHTML = '';
-
   const wrap = document.createElement('div');
   wrap.className = 'ws-wrap';
 
+  // Session complete
+  if (wsState.queue.length === 0) {
+    wrap.innerHTML =
+      '<div class="ws-progress">' + wsState.mastered.length + ' words mastered this session' + '</div>' +
+      '<div class="ws-card"><div class="ws-text">Nice work! 🎉</div></div>' +
+      '<div class="ws-nav-row">' +
+        '<button class="ws-nav-btn" id="wsRestartBtn">Practice again</button>' +
+      '</div>' +
+      '<button class="ws-reset-link" id="wsResetLink">Reset practice history for this list</button>';
+    app.appendChild(wrap);
+    document.getElementById('wsRestartBtn').onclick = () => {
+      wsState = { id: id, queue: buildWsQueue(id), mastered: [], correct: 0, attempted: 0 };
+      renderWorksheetScreen(id);
+    };
+    document.getElementById('wsResetLink').onclick = () => {
+      saveWsWeights(id, new Array(data.items.length).fill(0));
+      wsState = { id: id, queue: buildWsQueue(id), mastered: [], correct: 0, attempted: 0 };
+      renderWorksheetScreen(id);
+    };
+    window.scrollTo(0,0);
+    return;
+  }
+
+  const currentIndex = wsState.queue[0];
+  const currentText = data.items[currentIndex];
+  const remaining = wsState.queue.length;
+
   const progress = document.createElement('div');
   progress.className = 'ws-progress';
-  progress.textContent = 'Card ' + (wsState.index + 1) + ' of ' + data.items.length +
-    (wsState.attempted > 0 ? ' · ' + wsState.correct + '/' + wsState.attempted + ' correct this session' : '');
+  progress.textContent = remaining + ' card' + (remaining === 1 ? '' : 's') + ' left this session' +
+    (wsState.attempted > 0 ? ' · ' + wsState.correct + '/' + wsState.attempted + ' correct' : '');
   wrap.appendChild(progress);
 
   const card = document.createElement('div');
   card.className = 'ws-card';
-  const currentText = data.items[wsState.index];
   card.innerHTML =
     '<div class="ws-text">' + currentText + '</div>' +
     '<button class="ws-speak" id="wsSpeakBtn">🔊 Say it</button>';
@@ -736,38 +809,48 @@ function renderWorksheetScreen(id) {
   const nav = document.createElement('div');
   nav.className = 'ws-nav-row';
   nav.innerHTML =
-    '<button class="ws-nav-btn" id="wsPrevBtn">← Previous</button>' +
-    '<button class="ws-nav-btn" id="wsRestartBtn">Restart</button>' +
-    '<button class="ws-nav-btn" id="wsNextBtn">Next →</button>';
+    '<button class="ws-nav-btn" id="wsSkipBtn">⏭ Skip</button>' +
+    '<button class="ws-nav-btn" id="wsRestartBtn">Restart session</button>';
   wrap.appendChild(nav);
 
   app.appendChild(wrap);
 
-  document.getElementById('wsSpeakBtn').onclick = () => speak(
-    data.mode === 'word' ? currentText : currentText
-  );
-  document.getElementById('wsCorrectBtn').onclick = () => { wsState.correct++; wsState.attempted++; wsAdvance(id); };
-  document.getElementById('wsRetryBtn').onclick = () => { wsState.attempted++; wsAdvance(id); };
-  document.getElementById('wsPrevBtn').onclick = () => {
-    wsState.index = (wsState.index - 1 + data.items.length) % data.items.length;
+  document.getElementById('wsSpeakBtn').onclick = () => speak(currentText);
+
+  document.getElementById('wsCorrectBtn').onclick = () => {
+    const weights = loadWsWeights(id, data.items.length);
+    weights[currentIndex] = Math.max(weights[currentIndex] - 1, 0);
+    saveWsWeights(id, weights);
+    wsState.queue.shift();
+    wsState.mastered.push(currentIndex);
+    wsState.correct++; wsState.attempted++;
     renderWorksheetScreen(id);
   };
-  document.getElementById('wsNextBtn').onclick = () => {
-    wsState.index = (wsState.index + 1) % data.items.length;
+
+  document.getElementById('wsRetryBtn').onclick = () => {
+    const weights = loadWsWeights(id, data.items.length);
+    weights[currentIndex] = Math.min(weights[currentIndex] + 1, 5);
+    saveWsWeights(id, weights);
+    wsState.queue.shift();
+    // Resurface this item again soon within the same session rather than at a fixed spot.
+    const reinsertAt = Math.min(3, wsState.queue.length);
+    wsState.queue.splice(reinsertAt, 0, currentIndex);
+    wsState.attempted++;
     renderWorksheetScreen(id);
   };
+
+  document.getElementById('wsSkipBtn').onclick = () => {
+    wsState.queue.shift();
+    wsState.queue.push(currentIndex);
+    renderWorksheetScreen(id);
+  };
+
   document.getElementById('wsRestartBtn').onclick = () => {
-    wsState = { id: id, index: 0, correct: 0, attempted: 0 };
+    wsState = { id: id, queue: buildWsQueue(id), mastered: [], correct: 0, attempted: 0 };
     renderWorksheetScreen(id);
   };
 
   window.scrollTo(0,0);
-}
-
-function wsAdvance(id) {
-  const data = worksheetsData[id];
-  wsState.index = (wsState.index + 1) % data.items.length;
-  renderWorksheetScreen(id);
 }
 
 

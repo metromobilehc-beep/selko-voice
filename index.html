@@ -27,6 +27,9 @@
     --people: #3F7050;
     --phrases: #5C5449;
     --comfort: #5E7A9E;
+    --speech: #6E5A8C;
+    --core: #7A6A4F;
+    --swallow: #8C5A6E;
 
     --radius: 18px;
     --font-scale: 1;
@@ -164,6 +167,30 @@
     color: #fff;
   }
 
+  .discipline-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 4px 16px 8px;
+    flex-wrap: wrap;
+  }
+  .discipline-row label {
+    font-size: calc(13px * var(--font-scale));
+    font-weight: 700;
+    color: var(--ink-soft);
+  }
+  .discipline-row select {
+    flex: 1;
+    min-width: 160px;
+    max-width: 320px;
+    font-size: calc(14px * var(--font-scale));
+    padding: 8px 10px;
+    border-radius: 10px;
+    border: 1px solid var(--border);
+    background: var(--card-bg);
+    color: var(--ink);
+  }
+
   /* ---------- Grid ---------- */
   .grid {
     display: grid;
@@ -206,6 +233,9 @@
   .cat-tile.phrases { background: var(--phrases); }
   .cat-tile.comfort { background: var(--comfort); }
   .cat-tile.pain-body { background: var(--pain); }
+  .cat-tile.speech { background: var(--speech); }
+  .cat-tile.core { background: var(--core); }
+  .cat-tile.swallow { background: var(--swallow); }
   .cat-tile.spell { background: var(--ink); }
 
   /* ---------- Spelling keyboard ---------- */
@@ -307,6 +337,16 @@
   </div>
 </div>
 
+<div class="discipline-row" id="disciplineRow">
+  <label for="disciplineSelect">Show topics for</label>
+  <select id="disciplineSelect">
+    <option value="all">All disciplines</option>
+    <option value="pt">Physical Therapy</option>
+    <option value="ot">Occupational Therapy</option>
+    <option value="slp">Speech-Language Pathology</option>
+  </select>
+</div>
+
 
 
 <div id="app"></div>
@@ -318,14 +358,17 @@ const categories = {
   home: {
     title: "Choose a topic",
     tiles: [
-      { id: 'pain-body', label: 'Pain & Body', icon: '⚠️', cls: 'pain-body', goto: 'pain-body' },
-      { id: 'needs', label: 'Needs', icon: '🛏️', cls: 'needs', goto: 'needs' },
-      { id: 'therapy', label: 'Therapy Session', icon: '🏃', cls: 'therapy', goto: 'therapy' },
-      { id: 'feelings', label: 'Feelings', icon: '💛', cls: 'feelings', goto: 'feelings' },
-      { id: 'people', label: 'People', icon: '👪', cls: 'people', goto: 'people' },
-      { id: 'comfort', label: 'Comfort & TV', icon: '📺', cls: 'comfort', goto: 'comfort' },
-      { id: 'phrases', label: 'Common Phrases', icon: '💬', cls: 'phrases', goto: 'phrases' },
-      { id: 'spell', label: 'Spell It Out', icon: '🔤', cls: 'spell', goto: 'spell' },
+      { id: 'pain-body', label: 'Pain & Body', icon: '⚠️', cls: 'pain-body', goto: 'pain-body', disciplines: ['pt','ot','slp'] },
+      { id: 'needs', label: 'Needs', icon: '🛏️', cls: 'needs', goto: 'needs', disciplines: ['pt','ot','slp'] },
+      { id: 'therapy', label: 'Therapy Session', icon: '🏃', cls: 'therapy', goto: 'therapy', disciplines: ['pt','ot'] },
+      { id: 'speech', label: 'Speech Session', icon: '🗣️', cls: 'speech', goto: 'speech', disciplines: ['slp'] },
+      { id: 'core', label: 'Core Words', icon: '🔑', cls: 'core', goto: 'core', disciplines: ['slp','pt','ot'] },
+      { id: 'swallow', label: 'Swallowing & Eating', icon: '🍽️', cls: 'swallow', goto: 'swallow', disciplines: ['slp'] },
+      { id: 'feelings', label: 'Feelings', icon: '💛', cls: 'feelings', goto: 'feelings', disciplines: ['pt','ot','slp'] },
+      { id: 'people', label: 'People', icon: '👪', cls: 'people', goto: 'people', disciplines: ['pt','ot','slp'] },
+      { id: 'comfort', label: 'Comfort & TV', icon: '📺', cls: 'comfort', goto: 'comfort', disciplines: ['pt','ot','slp'] },
+      { id: 'phrases', label: 'Common Phrases', icon: '💬', cls: 'phrases', goto: 'phrases', disciplines: ['pt','ot','slp'] },
+      { id: 'spell', label: 'Spell It Out', icon: '🔤', cls: 'spell', goto: 'spell', disciplines: ['pt','ot','slp'] },
     ]
   },
   'pain-body': {
@@ -420,6 +463,59 @@ const categories = {
       { icon: '💡', label: 'Turn on the light', speak: 'Please turn on the light' },
       { icon: '🌙', label: 'Turn off the light', speak: 'Please turn off the light' },
       { icon: '🪟', label: 'Open the blinds', speak: 'Please open the blinds' },
+    ]
+  },
+  speech: {
+    title: 'Speech Session',
+    tiles: [
+      { icon: '✅', label: "I'm ready", speak: 'I am ready to start' },
+      { icon: '⏸️', label: 'Need a break', speak: 'I need a break, please' },
+      { icon: '🔁', label: 'Say it again please', speak: 'Please say that again' },
+      { icon: '🗣️', label: "I'll try again", speak: 'I will try to say that again' },
+      { icon: '😕', label: 'That was hard to say', speak: 'That was hard for me to say' },
+      { icon: '❓', label: "I don't know that word", speak: 'I do not know that word' },
+      { icon: '🖼️', label: 'Show me a picture instead', speak: 'Can you show me a picture instead' },
+      { icon: '✍️', label: 'Let me write it', speak: 'Can I write it instead' },
+      { icon: '⏳', label: 'I need more time to think', speak: 'I need more time to think' },
+      { icon: '👍', label: 'I understand you', speak: 'I understand what you said' },
+      { icon: '🚫', label: "I don't understand", speak: 'I do not understand, please try a different word' },
+      { icon: '🎯', label: 'That was the right word', speak: 'Yes, that is the right word' },
+    ]
+  },
+  core: {
+    title: 'Core Words',
+    tiles: [
+      { icon: '🙋', label: 'I', speak: 'I' },
+      { icon: '👉', label: 'You', speak: 'You' },
+      { icon: '🙌', label: 'Want', speak: 'I want' },
+      { icon: '➕', label: 'More', speak: 'More' },
+      { icon: '🛑', label: 'Stop', speak: 'Stop' },
+      { icon: '▶️', label: 'Go', speak: 'Go' },
+      { icon: '🖐️', label: 'Help', speak: 'Help' },
+      { icon: '👍', label: 'Like', speak: 'I like that' },
+      { icon: '👎', label: "Don't like", speak: 'I do not like that' },
+      { icon: '❤️', label: 'Feel', speak: 'I feel' },
+      { icon: '👀', label: 'Look', speak: 'Look' },
+      { icon: '🤲', label: 'Give', speak: 'Give me that' },
+      { icon: '🔀', label: 'Different', speak: 'That is different' },
+      { icon: '🟰', label: 'Same', speak: 'That is the same' },
+      { icon: '✅', label: 'Finished', speak: 'I am finished' },
+      { icon: '🔁', label: 'Again', speak: 'Again' },
+    ]
+  },
+  swallow: {
+    title: 'Swallowing & Eating',
+    tiles: [
+      { icon: '⚠️', label: 'Food feels stuck', speak: 'My food feels stuck' },
+      { icon: '💧', label: 'Trouble swallowing', speak: 'I am having trouble swallowing' },
+      { icon: '😮‍💨', label: 'Coughing when I eat', speak: 'I am coughing when I eat or drink' },
+      { icon: '🥤', label: 'Need thickened liquids', speak: 'I need my liquids thickened' },
+      { icon: '🍽️', label: 'Need smaller bites', speak: 'I need smaller bites, please' },
+      { icon: '🐢', label: 'Need more time to chew', speak: 'I need more time to chew' },
+      { icon: '🏜️', label: 'This is too dry', speak: 'This food is too dry' },
+      { icon: '🛑', label: 'Not ready to eat', speak: 'I am not ready to eat right now' },
+      { icon: '🙅', label: "I don't want this", speak: 'I do not want to eat this' },
+      { icon: '👍', label: 'That went down fine', speak: 'That went down fine' },
     ]
   },
   phrases: {
@@ -610,13 +706,19 @@ function showScreen(id) {
   const cat = categories[id];
   document.getElementById('screenTitle').textContent = cat.title;
   document.getElementById('backBtn').classList.toggle('visible', id !== 'home');
+  document.getElementById('disciplineRow').style.display = (id === 'home') ? 'flex' : 'none';
 
   const app = document.getElementById('app');
   app.innerHTML = '';
   const grid = document.createElement('div');
   grid.className = 'grid';
 
-  cat.tiles.forEach(t => {
+  const discipline = document.getElementById('disciplineSelect').value;
+  const tilesToShow = (id === 'home')
+    ? cat.tiles.filter(t => discipline === 'all' || !t.disciplines || t.disciplines.includes(discipline))
+    : cat.tiles;
+
+  tilesToShow.forEach(t => {
     const btn = document.createElement('button');
     btn.className = 'tile' + (t.goto ? ' cat-tile ' + t.cls : '');
     btn.innerHTML = '<span class="icon">' + t.icon + '</span><span class="name">' + t.label + '</span>';
@@ -642,6 +744,13 @@ function setFontScale(v) {
 // restore saved font scale
 const savedScale = parseFloat(localStorage.getItem('selko-voice-font-scale') || '1');
 setFontScale(savedScale);
+
+const disciplineSelect = document.getElementById('disciplineSelect');
+disciplineSelect.value = localStorage.getItem('selko-voice-discipline') || 'all';
+disciplineSelect.addEventListener('change', function() {
+  localStorage.setItem('selko-voice-discipline', disciplineSelect.value);
+  showScreen('home');
+});
 
 showScreen('home');
 </script>

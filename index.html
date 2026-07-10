@@ -164,6 +164,41 @@
     color: #fff;
   }
 
+  .voice-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 16px 8px;
+    flex-wrap: wrap;
+  }
+  .voice-row label {
+    font-size: calc(13px * var(--font-scale));
+    font-weight: 700;
+    color: var(--ink-soft);
+  }
+  .voice-row select {
+    flex: 1;
+    min-width: 140px;
+    max-width: 320px;
+    font-size: calc(14px * var(--font-scale));
+    padding: 8px 10px;
+    border-radius: 10px;
+    border: 1px solid var(--border);
+    background: var(--card-bg);
+    color: var(--ink);
+  }
+  .voice-row button {
+    border: 1px solid var(--border);
+    background: var(--card-bg);
+    border-radius: 10px;
+    padding: 8px 14px;
+    font-size: calc(14px * var(--font-scale));
+    font-weight: 700;
+    color: var(--ink);
+    cursor: pointer;
+  }
+  .voice-row button:active { background: var(--border); }
+
   /* ---------- Grid ---------- */
   .grid {
     display: grid;
@@ -305,6 +340,12 @@
     <button data-size="1.25" onclick="setFontScale(1.25)">A+</button>
     <button data-size="1.55" onclick="setFontScale(1.55)">A++</button>
   </div>
+</div>
+
+<div class="voice-row">
+  <label for="voiceSelect">Voice</label>
+  <select id="voiceSelect"></select>
+  <button id="voiceTestBtn" type="button">▶ Test</button>
 </div>
 
 <div id="app"></div>
@@ -460,6 +501,8 @@ function speak(text) {
     setTimeout(() => {
       const utter = new SpeechSynthesisUtterance(text);
       utter.rate = 0.95;
+      const chosen = getSelectedVoice();
+      if (chosen) utter.voice = chosen;
 
       utter.onend = () => {
         if (speakWatchdog) clearTimeout(speakWatchdog);
@@ -493,6 +536,82 @@ function speak(text) {
 document.getElementById('replayBtn').onclick = function() {
   if (lastSpoken) speak(lastSpoken);
 };
+
+/* ---------- Voice selection ---------- */
+let availableVoices = [];
+
+function scoreVoice(v) {
+  // Prefer higher-quality sounding voices when the platform offers a choice.
+  // Names vary by OS/browser, so match on common quality markers.
+  const name = (v.name || '').toLowerCase();
+  let score = 0;
+  if (/natural|neural|enhanced|premium|wavenet/.test(name)) score += 10;
+  if (v.localService === false) score += 2; // often higher-quality network voices
+  if (/google/.test(name)) score += 3;
+  if (v.lang && v.lang.toLowerCase().startsWith('en')) score += 1;
+  if (/female|male/.test(name)) score += 1; // named/gendered voices tend to be non-robotic defaults
+  return score;
+}
+
+function populateVoiceList() {
+  availableVoices = window.speechSynthesis.getVoices() || [];
+  const select = document.getElementById('voiceSelect');
+  if (!select) return;
+  select.innerHTML = '';
+
+  if (availableVoices.length === 0) {
+    const opt = document.createElement('option');
+    opt.textContent = 'Default device voice';
+    opt.value = '';
+    select.appendChild(opt);
+    return;
+  }
+
+  availableVoices.forEach((v, i) => {
+    const opt = document.createElement('option');
+    opt.value = i;
+    opt.textContent = v.name + (v.lang ? ' (' + v.lang + ')' : '');
+    select.appendChild(opt);
+  });
+
+  const saved = localStorage.getItem('selko-voice-name');
+  let indexToSelect = 0;
+
+  if (saved) {
+    const savedIdx = availableVoices.findIndex(v => v.name === saved);
+    if (savedIdx >= 0) indexToSelect = savedIdx;
+  } else {
+    // No saved preference yet: auto-pick the best-sounding voice available.
+    let best = 0, bestScore = -1;
+    availableVoices.forEach((v, i) => {
+      const s = scoreVoice(v);
+      if (s > bestScore) { bestScore = s; best = i; }
+    });
+    indexToSelect = best;
+  }
+
+  select.value = indexToSelect;
+}
+
+function getSelectedVoice() {
+  const select = document.getElementById('voiceSelect');
+  if (!select || select.value === '' || availableVoices.length === 0) return null;
+  return availableVoices[parseInt(select.value, 10)] || null;
+}
+
+if ('speechSynthesis' in window) {
+  populateVoiceList();
+  window.speechSynthesis.onvoiceschanged = populateVoiceList;
+}
+
+document.getElementById('voiceSelect').addEventListener('change', function() {
+  const v = getSelectedVoice();
+  if (v) localStorage.setItem('selko-voice-name', v.name);
+});
+
+document.getElementById('voiceTestBtn').addEventListener('click', function() {
+  speak('Hi, this is how I will sound.');
+});
 
 function renderSpellScreen() {
   document.getElementById('screenTitle').textContent = 'Spell It Out';

@@ -1,0 +1,567 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1">
+<title>Selko Voice — Patient Communication Board</title>
+<style>
+  :root{
+    --bg: #F7F5F1;
+    --ink: #1F2D2E;
+    --ink-soft: #4A5657;
+    --card-bg: #FFFFFF;
+    --border: #E3DFD6;
+
+    --pain: #C0392B;
+    --pain-dark: #97281D;
+    --no: #8A4A3E;
+    --no-dark: #6E3A30;
+    --yes: #2F6F4E;
+    --yes-dark: #24583D;
+    --help: #B8863B;
+    --help-dark: #93691F;
+
+    --needs: #2B6777;
+    --therapy: #45568C;
+    --feelings: #A87C2E;
+    --people: #3F7050;
+    --phrases: #5C5449;
+    --comfort: #5E7A9E;
+
+    --radius: 18px;
+    --font-scale: 1;
+  }
+
+  * { box-sizing: border-box; }
+
+  html, body {
+    margin: 0; padding: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    -webkit-tap-highlight-color: transparent;
+    overscroll-behavior: none;
+  }
+
+  button { font-family: inherit; }
+
+  /* ---------- Top: Spoken bubble ---------- */
+  .spoken-bar {
+    position: sticky; top: 0; z-index: 20;
+    background: var(--ink);
+    color: #fff;
+    padding: calc(14px * var(--font-scale)) calc(18px * var(--font-scale));
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    min-height: 64px;
+  }
+  .spoken-bar .label {
+    font-size: calc(13px * var(--font-scale));
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    opacity: 0.6;
+    white-space: nowrap;
+  }
+  .spoken-bar .text {
+    font-size: calc(28px * var(--font-scale));
+    font-weight: 700;
+    flex: 1;
+    overflow-wrap: anywhere;
+  }
+  .spoken-bar .replay {
+    background: rgba(255,255,255,0.15);
+    border: none;
+    color: #fff;
+    border-radius: 12px;
+    width: 48px; height: 48px;
+    font-size: 22px;
+    flex-shrink: 0;
+    cursor: pointer;
+  }
+  .spoken-bar .replay:active { background: rgba(255,255,255,0.3); }
+
+  /* ---------- Quick access strip ---------- */
+  .quick-strip {
+    position: sticky; top: calc(64px);
+    z-index: 19;
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 8px;
+    padding: 10px 12px;
+    background: var(--bg);
+    border-bottom: 1px solid var(--border);
+  }
+  .quick-btn {
+    border: none;
+    border-radius: 14px;
+    padding: calc(12px * var(--font-scale)) 4px;
+    font-size: calc(16px * var(--font-scale));
+    font-weight: 700;
+    color: #fff;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    cursor: pointer;
+    min-height: 64px;
+    justify-content: center;
+  }
+  .quick-btn .icon { font-size: calc(24px * var(--font-scale)); }
+  .quick-btn.yes { background: var(--yes); }
+  .quick-btn.yes:active { background: var(--yes-dark); }
+  .quick-btn.no { background: var(--no); }
+  .quick-btn.no:active { background: var(--no-dark); }
+  .quick-btn.pain { background: var(--pain); }
+  .quick-btn.pain:active { background: var(--pain-dark); }
+  .quick-btn.help { background: var(--help); }
+  .quick-btn.help:active { background: var(--help-dark); }
+
+  /* ---------- Header row: back + title + text size ---------- */
+  .header-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 14px 16px 4px;
+  }
+  .back-btn {
+    border: 1px solid var(--border);
+    background: var(--card-bg);
+    border-radius: 12px;
+    padding: 10px 16px;
+    font-size: calc(16px * var(--font-scale));
+    font-weight: 600;
+    color: var(--ink);
+    cursor: pointer;
+    display: none;
+  }
+  .back-btn.visible { display: inline-flex; align-items: center; gap: 6px; }
+  .screen-title {
+    font-size: calc(20px * var(--font-scale));
+    font-weight: 700;
+    flex: 1;
+  }
+  .size-toggle {
+    display: flex;
+    gap: 4px;
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 4px;
+  }
+  .size-toggle button {
+    border: none;
+    background: transparent;
+    border-radius: 8px;
+    padding: 6px 10px;
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--ink-soft);
+    cursor: pointer;
+  }
+  .size-toggle button.active {
+    background: var(--ink);
+    color: #fff;
+  }
+
+  /* ---------- Grid ---------- */
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+    padding: 10px 16px 32px;
+  }
+  @media (min-width: 640px) {
+    .grid { grid-template-columns: repeat(3, 1fr); }
+  }
+  @media (min-width: 960px) {
+    .grid { grid-template-columns: repeat(4, 1fr); }
+  }
+
+  .tile {
+    border: none;
+    border-radius: var(--radius);
+    background: var(--card-bg);
+    border: 2px solid var(--border);
+    padding: calc(18px * var(--font-scale)) 10px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    min-height: 110px;
+    justify-content: center;
+    text-align: center;
+  }
+  .tile:active { transform: scale(0.97); }
+  .tile .icon { font-size: calc(34px * var(--font-scale)); line-height: 1; }
+  .tile .name { font-size: calc(16px * var(--font-scale)); font-weight: 700; line-height: 1.2; }
+
+  .cat-tile { color: #fff; border: none; }
+  .cat-tile .name { color: #fff; }
+  .cat-tile.needs { background: var(--needs); }
+  .cat-tile.therapy { background: var(--therapy); }
+  .cat-tile.feelings { background: var(--feelings); }
+  .cat-tile.people { background: var(--people); }
+  .cat-tile.phrases { background: var(--phrases); }
+  .cat-tile.comfort { background: var(--comfort); }
+  .cat-tile.pain-body { background: var(--pain); }
+  .cat-tile.spell { background: var(--ink); }
+
+  /* ---------- Spelling keyboard ---------- */
+  .spell-preview {
+    margin: 0 16px 10px;
+    background: var(--card-bg);
+    border: 2px solid var(--border);
+    border-radius: var(--radius);
+    padding: calc(16px * var(--font-scale));
+    font-size: calc(30px * var(--font-scale));
+    font-weight: 700;
+    min-height: calc(48px * var(--font-scale));
+    overflow-wrap: anywhere;
+    color: var(--ink);
+  }
+  .spell-preview.empty { color: var(--ink-soft); font-weight: 500; }
+  .spell-actions {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+    margin: 0 16px 14px;
+  }
+  .spell-actions button {
+    border: none;
+    border-radius: 12px;
+    padding: calc(12px * var(--font-scale)) 6px;
+    font-size: calc(15px * var(--font-scale));
+    font-weight: 700;
+    color: #fff;
+    cursor: pointer;
+  }
+  .spell-actions .speak-word { background: var(--yes); }
+  .spell-actions .space-word { background: var(--needs); }
+  .spell-actions .clear-word { background: var(--pain); }
+  .keyboard-grid {
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    gap: 8px;
+    padding: 0 16px 20px;
+  }
+  @media (min-width: 640px) {
+    .keyboard-grid { grid-template-columns: repeat(9, 1fr); }
+  }
+  .key-btn {
+    border: 2px solid var(--border);
+    background: var(--card-bg);
+    border-radius: 12px;
+    padding: calc(14px * var(--font-scale)) 0;
+    font-size: calc(20px * var(--font-scale));
+    font-weight: 700;
+    color: var(--ink);
+    cursor: pointer;
+  }
+  .key-btn:active { transform: scale(0.95); background: var(--border); }
+  .key-btn.backspace { background: var(--no); color: #fff; border: none; font-size: calc(16px * var(--font-scale)); }
+
+  .section-note {
+    padding: 4px 16px 0;
+    font-size: calc(14px * var(--font-scale));
+    color: var(--ink-soft);
+  }
+
+  /* focus visibility for keyboard/switch access */
+  button:focus-visible {
+    outline: 3px solid #2B6777;
+    outline-offset: 2px;
+  }
+
+  .footer-note {
+    text-align: center;
+    color: var(--ink-soft);
+    font-size: 12px;
+    padding: 6px 16px 20px;
+  }
+</style>
+</head>
+<body>
+
+<div class="spoken-bar">
+  <span class="label">Said</span>
+  <span class="text" id="spokenText">Tap anything to begin</span>
+  <button class="replay" id="replayBtn" aria-label="Repeat last phrase">🔊</button>
+</div>
+
+<div class="quick-strip">
+  <button class="quick-btn yes" onclick="speak('Yes')"><span class="icon">👍</span>Yes</button>
+  <button class="quick-btn no" onclick="speak('No')"><span class="icon">👎</span>No</button>
+  <button class="quick-btn pain" onclick="showScreen('pain-body')"><span class="icon">⚠️</span>Pain</button>
+  <button class="quick-btn help" onclick="speak('I need staff to come here, please')"><span class="icon">🖐️</span>Help</button>
+</div>
+
+<div class="header-row">
+  <button class="back-btn" id="backBtn" onclick="showScreen('home')">← Back</button>
+  <div class="screen-title" id="screenTitle">Choose a topic</div>
+  <div class="size-toggle">
+    <button data-size="1" onclick="setFontScale(1)">A</button>
+    <button data-size="1.25" onclick="setFontScale(1.25)">A+</button>
+    <button data-size="1.55" onclick="setFontScale(1.55)">A++</button>
+  </div>
+</div>
+
+<div id="app"></div>
+
+<div class="footer-note">Selko Voice · works without internet · a Selko module</div>
+
+<script>
+const categories = {
+  home: {
+    title: "Choose a topic",
+    tiles: [
+      { id: 'pain-body', label: 'Pain & Body', icon: '⚠️', cls: 'pain-body', goto: 'pain-body' },
+      { id: 'needs', label: 'Needs', icon: '🛏️', cls: 'needs', goto: 'needs' },
+      { id: 'therapy', label: 'Therapy Session', icon: '🏃', cls: 'therapy', goto: 'therapy' },
+      { id: 'feelings', label: 'Feelings', icon: '💛', cls: 'feelings', goto: 'feelings' },
+      { id: 'people', label: 'People', icon: '👪', cls: 'people', goto: 'people' },
+      { id: 'comfort', label: 'Comfort & TV', icon: '📺', cls: 'comfort', goto: 'comfort' },
+      { id: 'phrases', label: 'Common Phrases', icon: '💬', cls: 'phrases', goto: 'phrases' },
+      { id: 'spell', label: 'Spell It Out', icon: '🔤', cls: 'spell', goto: 'spell' },
+    ]
+  },
+  'pain-body': {
+    title: 'Pain & Body',
+    tiles: [
+      { icon: '1️⃣', label: 'Pain: mild', speak: 'My pain is mild, about a 1 to 3' },
+      { icon: '2️⃣', label: 'Pain: moderate', speak: 'My pain is moderate, about a 4 to 6' },
+      { icon: '3️⃣', label: 'Pain: severe', speak: 'My pain is severe, about a 7 to 10' },
+      { icon: '📍', label: 'Head', speak: 'My head hurts' },
+      { icon: '📍', label: 'Neck', speak: 'My neck hurts' },
+      { icon: '📍', label: 'Shoulder', speak: 'My shoulder hurts' },
+      { icon: '📍', label: 'Back', speak: 'My back hurts' },
+      { icon: '📍', label: 'Hip', speak: 'My hip hurts' },
+      { icon: '📍', label: 'Knee', speak: 'My knee hurts' },
+      { icon: '📍', label: 'Ankle / Foot', speak: 'My ankle or foot hurts' },
+      { icon: '📍', label: 'Chest', speak: 'My chest hurts' },
+      { icon: '🌀', label: 'It\u2019s a new pain', speak: 'This is a new pain I have not felt before' },
+    ]
+  },
+  needs: {
+    title: 'Needs',
+    tiles: [
+      { icon: '🚻', label: 'Bathroom', speak: 'I need to use the bathroom' },
+      { icon: '💧', label: 'Water / drink', speak: 'I would like something to drink' },
+      { icon: '🍽️', label: 'Hungry', speak: 'I am hungry' },
+      { icon: '😴', label: 'Tired, need rest', speak: 'I am tired and need to rest' },
+      { icon: '🥵', label: 'Too hot', speak: 'I am too hot' },
+      { icon: '🥶', label: 'Too cold', speak: 'I am too cold' },
+      { icon: '🔄', label: 'Reposition me', speak: 'Please help me change position' },
+      { icon: '🧣', label: 'Blanket', speak: 'I would like a blanket' },
+      { icon: '💊', label: 'Medication', speak: 'I need my medication' },
+      { icon: '😮‍💨', label: 'Trouble breathing', speak: 'I am having trouble breathing' },
+      { icon: '🪑', label: 'Help me sit up', speak: 'Please help me sit up' },
+      { icon: '🛌', label: 'Help me lay down', speak: 'Please help me lay down' },
+      { icon: '🧍', label: 'Help me stand up', speak: 'Please help me stand up' },
+      { icon: '↩️', label: 'Turn me on my side', speak: 'Please help me turn onto my side' },
+      { icon: '👓', label: 'My glasses', speak: 'I need my glasses' },
+      { icon: '👂', label: 'My hearing aids', speak: 'I need my hearing aids' },
+    ]
+  },
+  therapy: {
+    title: 'Therapy Session',
+    tiles: [
+      { icon: '✅', label: "I'm ready", speak: 'I am ready to start' },
+      { icon: '⏸️', label: 'Need a break', speak: 'I need a break, please' },
+      { icon: '🛑', label: 'Please stop', speak: 'Please stop' },
+      { icon: '⚠️', label: 'That hurts', speak: 'That hurts' },
+      { icon: '➕', label: 'One more rep', speak: 'I can do one more' },
+      { icon: '🔁', label: 'Switch side', speak: 'Let\u2019s switch to the other side' },
+      { icon: '😵‍💫', label: 'Dizzy', speak: 'I feel dizzy' },
+      { icon: '👍', label: "That's easy", speak: 'That feels easy, I can do more' },
+      { icon: '👎', label: 'Too hard', speak: 'That is too hard right now' },
+      { icon: '🎯', label: 'Same as last time', speak: 'Let\u2019s do the same as last visit' },
+    ]
+  },
+  feelings: {
+    title: 'Feelings',
+    tiles: [
+      { icon: '🙂', label: 'Good', speak: 'I feel good' },
+      { icon: '😟', label: 'Anxious', speak: 'I feel anxious' },
+      { icon: '😢', label: 'Sad', speak: 'I feel sad' },
+      { icon: '😠', label: 'Frustrated', speak: 'I feel frustrated' },
+      { icon: '😨', label: 'Scared', speak: 'I feel scared' },
+      { icon: '😕', label: 'Confused', speak: 'I feel confused' },
+      { icon: '😩', label: 'Overwhelmed', speak: 'I feel overwhelmed' },
+      { icon: '💪', label: 'Motivated', speak: 'I feel motivated today' },
+    ]
+  },
+  people: {
+    title: 'People',
+    tiles: [
+      { icon: '👨‍⚕️', label: 'Get my nurse', speak: 'Please get my nurse' },
+      { icon: '🧑‍⚕️', label: 'Get my therapist', speak: 'Please get my therapist' },
+      { icon: '👪', label: 'Call my family', speak: 'Please call my family' },
+      { icon: '🚪', label: "Someone's at the door", speak: 'Someone is at the door' },
+      { icon: '🐾', label: 'My pet needs something', speak: 'My pet needs something' },
+      { icon: '🙋', label: 'I want to speak with someone', speak: 'I would like to speak with someone' },
+    ]
+  },
+  comfort: {
+    title: 'Comfort & TV',
+    tiles: [
+      { icon: '📺', label: 'Turn on TV', speak: 'Please turn on the TV' },
+      { icon: '📴', label: 'Turn off TV', speak: 'Please turn off the TV' },
+      { icon: '🔀', label: 'Change the channel', speak: 'Please change the channel' },
+      { icon: '🔊', label: 'Volume up', speak: 'Please turn the volume up' },
+      { icon: '🔉', label: 'Volume down', speak: 'Please turn the volume down' },
+      { icon: '📻', label: 'Play some music', speak: 'Please play some music' },
+      { icon: '🤫', label: 'I want it quiet', speak: 'I would like it quiet, please' },
+      { icon: '🌤️', label: "What's the weather?", speak: 'What is the weather like today' },
+      { icon: '📅', label: 'What day is it?', speak: 'What day is it today' },
+      { icon: '💡', label: 'Turn on the light', speak: 'Please turn on the light' },
+      { icon: '🌙', label: 'Turn off the light', speak: 'Please turn off the light' },
+      { icon: '🪟', label: 'Open the blinds', speak: 'Please open the blinds' },
+    ]
+  },
+  phrases: {
+    title: 'Common Phrases',
+    tiles: [
+      { icon: '🙏', label: 'Thank you', speak: 'Thank you' },
+      { icon: '👍', label: 'I understand', speak: 'I understand' },
+      { icon: '❓', label: "I don't understand", speak: 'I do not understand' },
+      { icon: '⏳', label: 'Please wait', speak: 'Please wait a moment' },
+      { icon: '🔁', label: 'Please repeat that', speak: 'Please say that again' },
+      { icon: '🕐', label: 'Come back later', speak: 'Can you come back later' },
+      { icon: '❤️', label: 'I love you', speak: 'I love you' },
+      { icon: '👋', label: 'Goodbye', speak: 'Goodbye, see you next time' },
+    ]
+  }
+};
+
+let lastSpoken = '';
+let spellBuffer = '';
+
+function speak(text) {
+  lastSpoken = text;
+  document.getElementById('spokenText').textContent = text;
+  try {
+    window.speechSynthesis.cancel();
+    const utter = new SpeechSynthesisUtterance(text);
+    utter.rate = 0.95;
+    window.speechSynthesis.speak(utter);
+  } catch (e) { /* speech not available, text still shown large on screen */ }
+}
+
+document.getElementById('replayBtn').onclick = function() {
+  if (lastSpoken) speak(lastSpoken);
+};
+
+function renderSpellScreen() {
+  document.getElementById('screenTitle').textContent = 'Spell It Out';
+  document.getElementById('backBtn').classList.toggle('visible', true);
+
+  const app = document.getElementById('app');
+  app.innerHTML = '';
+
+  const preview = document.createElement('div');
+  preview.className = 'spell-preview' + (spellBuffer ? '' : ' empty');
+  preview.id = 'spellPreview';
+  preview.textContent = spellBuffer || 'Tap letters to spell a word or message\u2026';
+  app.appendChild(preview);
+
+  const actions = document.createElement('div');
+  actions.className = 'spell-actions';
+  actions.innerHTML =
+    '<button class="space-word" onclick="spellSpace()">Space</button>' +
+    '<button class="speak-word" onclick="spellSpeak()">🔊 Speak</button>' +
+    '<button class="clear-word" onclick="spellClear()">Clear</button>';
+  app.appendChild(actions);
+
+  const grid = document.createElement('div');
+  grid.className = 'keyboard-grid';
+  const letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
+  letters.forEach(l => {
+    const btn = document.createElement('button');
+    btn.className = 'key-btn';
+    btn.textContent = l;
+    btn.onclick = function(){ spellAdd(l); };
+    grid.appendChild(btn);
+  });
+  const back = document.createElement('button');
+  back.className = 'key-btn backspace';
+  back.textContent = '⌫ Delete';
+  back.onclick = spellBackspace;
+  grid.appendChild(back);
+  app.appendChild(grid);
+}
+
+function spellAdd(letter) {
+  spellBuffer += letter;
+  updateSpellPreview();
+}
+function spellSpace() {
+  spellBuffer += ' ';
+  updateSpellPreview();
+}
+function spellBackspace() {
+  spellBuffer = spellBuffer.slice(0, -1);
+  updateSpellPreview();
+}
+function spellClear() {
+  spellBuffer = '';
+  updateSpellPreview();
+}
+function spellSpeak() {
+  if (spellBuffer.trim().length > 0) speak(spellBuffer);
+}
+function updateSpellPreview() {
+  const el = document.getElementById('spellPreview');
+  if (!el) return;
+  el.textContent = spellBuffer || 'Tap letters to spell a word or message\u2026';
+  el.classList.toggle('empty', !spellBuffer);
+}
+
+function showScreen(id) {
+  if (id === 'spell') {
+    renderSpellScreen();
+    window.scrollTo(0,0);
+    return;
+  }
+  const cat = categories[id];
+  document.getElementById('screenTitle').textContent = cat.title;
+  document.getElementById('backBtn').classList.toggle('visible', id !== 'home');
+
+  const app = document.getElementById('app');
+  app.innerHTML = '';
+  const grid = document.createElement('div');
+  grid.className = 'grid';
+
+  cat.tiles.forEach(t => {
+    const btn = document.createElement('button');
+    btn.className = 'tile' + (t.goto ? ' cat-tile ' + t.cls : '');
+    btn.innerHTML = '<span class="icon">' + t.icon + '</span><span class="name">' + t.label + '</span>';
+    btn.onclick = function() {
+      if (t.goto) { showScreen(t.goto); }
+      else { speak(t.speak); }
+    };
+    grid.appendChild(btn);
+  });
+
+  app.appendChild(grid);
+  window.scrollTo(0,0);
+}
+
+function setFontScale(v) {
+  document.documentElement.style.setProperty('--font-scale', v);
+  document.querySelectorAll('.size-toggle button').forEach(b => {
+    b.classList.toggle('active', parseFloat(b.dataset.size) === v);
+  });
+  localStorage.setItem('selko-voice-font-scale', v);
+}
+
+// restore saved font scale
+const savedScale = parseFloat(localStorage.getItem('selko-voice-font-scale') || '1');
+setFontScale(savedScale);
+
+showScreen('home');
+</script>
+
+</body>
+</html>

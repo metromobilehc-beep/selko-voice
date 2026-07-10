@@ -438,14 +438,55 @@ const categories = {
 let lastSpoken = '';
 let spellBuffer = '';
 
+let speakWatchdog = null;
+let resumeInterval = null;
+
 function speak(text) {
   lastSpoken = text;
   document.getElementById('spokenText').textContent = text;
+
   try {
-    window.speechSynthesis.cancel();
-    const utter = new SpeechSynthesisUtterance(text);
-    utter.rate = 0.95;
-    window.speechSynthesis.speak(utter);
+    const synth = window.speechSynthesis;
+
+    // Clear any stuck timers from a previous jammed utterance
+    if (speakWatchdog) clearTimeout(speakWatchdog);
+    if (resumeInterval) clearInterval(resumeInterval);
+
+    // Force-clear the queue. On some Android tablets, calling speak()
+    // immediately after cancel() races and the queue jams, so give it
+    // a beat before queuing the new utterance.
+    synth.cancel();
+
+    setTimeout(() => {
+      const utter = new SpeechSynthesisUtterance(text);
+      utter.rate = 0.95;
+
+      utter.onend = () => {
+        if (speakWatchdog) clearTimeout(speakWatchdog);
+        if (resumeInterval) clearInterval(resumeInterval);
+      };
+      utter.onerror = () => {
+        if (speakWatchdog) clearTimeout(speakWatchdog);
+        if (resumeInterval) clearInterval(resumeInterval);
+      };
+
+      synth.speak(utter);
+
+      // Chrome/WebView bug: speech can silently pause after ~15s and
+      // never resume. Nudge it periodically while this utterance is active.
+      resumeInterval = setInterval(() => {
+        if (synth.speaking) { synth.pause(); synth.resume(); }
+      }, 8000);
+
+      // Watchdog: if nothing fires 'end' within 12s (this app's phrases
+      // are all short), assume the queue jammed and force a reset so the
+      // NEXT tap isn't blocked.
+      speakWatchdog = setTimeout(() => {
+        synth.cancel();
+        if (resumeInterval) clearInterval(resumeInterval);
+      }, 12000);
+    }, 60);
+
   } catch (e) { /* speech not available, text still shown large on screen */ }
 }
 

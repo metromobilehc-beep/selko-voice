@@ -199,6 +199,60 @@
   }
   .voice-row button:active { background: var(--border); }
 
+  .voice-help {
+    margin: 0 16px 14px;
+    background: var(--card-bg);
+    border: 2px solid var(--border);
+    border-radius: var(--radius);
+    padding: calc(16px * var(--font-scale)) calc(18px * var(--font-scale));
+    position: relative;
+  }
+  .voice-help h3 {
+    margin: 0 0 8px;
+    font-size: calc(18px * var(--font-scale));
+    padding-right: 30px;
+  }
+  .voice-help p {
+    margin: 0 0 10px;
+    font-size: calc(14px * var(--font-scale));
+    color: var(--ink-soft);
+    line-height: 1.4;
+  }
+  .voice-help-cols {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 14px;
+    margin-bottom: 10px;
+  }
+  @media (min-width: 640px) {
+    .voice-help-cols { grid-template-columns: 1fr 1fr; }
+  }
+  .voice-help-cols strong {
+    display: block;
+    font-size: calc(15px * var(--font-scale));
+    margin-bottom: 6px;
+  }
+  .voice-help-cols ol {
+    margin: 0;
+    padding-left: 20px;
+    font-size: calc(14px * var(--font-scale));
+    color: var(--ink);
+    line-height: 1.5;
+  }
+  .voice-help-note {
+    font-style: italic;
+  }
+  .voice-help-close {
+    position: absolute;
+    top: 12px; right: 12px;
+    border: none;
+    background: var(--border);
+    border-radius: 50%;
+    width: 28px; height: 28px;
+    font-size: 14px;
+    cursor: pointer;
+  }
+
   /* ---------- Grid ---------- */
   .grid {
     display: grid;
@@ -346,6 +400,33 @@
   <label for="voiceSelect">Voice</label>
   <select id="voiceSelect"></select>
   <button id="voiceTestBtn" type="button">▶ Test</button>
+  <button id="voiceHelpBtn" type="button">Sounds robotic? Fix it</button>
+</div>
+
+<div class="voice-help" id="voiceHelp" hidden>
+  <button class="voice-help-close" id="voiceHelpClose" type="button" aria-label="Close">✕</button>
+  <h3>Getting a natural-sounding voice</h3>
+  <p>The dropdown above can only use voices already installed on this tablet. If everything sounds flat or robotic, install a better voice pack once per device:</p>
+  <div class="voice-help-cols">
+    <div>
+      <strong>On Android tablets</strong>
+      <ol>
+        <li>Settings → Accessibility → Text-to-speech output</li>
+        <li>Set engine to <em>Google Speech Services</em> (not the manufacturer's own)</li>
+        <li>Tap the gear next to it → Install voice data → choose a language</li>
+        <li>Pick the <em>Natural</em> or <em>Neural</em> voice if offered</li>
+      </ol>
+    </div>
+    <div>
+      <strong>On iPad</strong>
+      <ol>
+        <li>Settings → Accessibility → Spoken Content → Voices</li>
+        <li>Pick a language</li>
+        <li>Choose the <em>Enhanced</em> or <em>Premium</em> quality tier and download it</li>
+      </ol>
+    </div>
+  </div>
+  <p class="voice-help-note">Once installed, reopen this page and the new voice will appear in the dropdown above — tap Test to check it before a visit.</p>
 </div>
 
 <div id="app"></div>
@@ -611,6 +692,13 @@ document.getElementById('voiceSelect').addEventListener('change', function() {
 
 document.getElementById('voiceTestBtn').addEventListener('click', function() {
   speak('Hi, this is how I will sound.');
+});
+
+document.getElementById('voiceHelpBtn').addEventListener('click', function() {
+  document.getElementById('voiceHelp').hidden = false;
+});
+document.getElementById('voiceHelpClose').addEventListener('click', function() {
+  document.getElementById('voiceHelp').hidden = true;
 });
 
 function renderSpellScreen() {
